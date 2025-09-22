@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Crypto Wallet Toolkit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#111a33; --panel-2:#0e162c; --text:#e9eefc; --muted:#9fb0df;
+      --accent:#4da3ff; --accent-2:#36c292; --danger:#ff5c7a; --warn:#ffcc66; --border:#213057; --chip:#1b2a54;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;}
+    body{margin:0;background:linear-gradient(180deg,#071028 0%, #0b1020 100%);color:var(--text);}
+    header{position:sticky;top:0;z-index:5;background:rgba(11,16,32,.8);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--border);}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+    h1{margin:0;font-size:24px;letter-spacing:.3px}
+    .subtitle{color:var(--muted);font-size:13px;margin-top:6px}
+    .grid{display:grid;gap:16px}
+    @media (min-width:980px){.grid-3{grid-template-columns:1.1fr 1fr 1fr}}
+    section{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);}
+    section h2{margin:0 0 12px 0;font-size:18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    input[type="text"], input[type="email"], input[type="password"]{
+      flex:1;min-width:220px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+      background:#0a132a;color:var(--text);outline:none
+    }
+    input::placeholder{color:#7f92c9}
+    button{padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--chip);color:var(--text)}
+    button.primary{background:var(--accent);border-color:#2a7dd7;color:#071028;font-weight:600}
+    button.success{background:var(--accent-2);border-color:#2a8a6f;color:#041216;font-weight:600}
+    button.warn{background:var(--warn);color:#222;border-color:#b38f4a}
+    button.danger{background:var(--danger);border-color:#c5425a}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .panel{background:#0b1533;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--chip);color:var(--muted);font-size:12px}
+    .taglist{display:flex;flex-wrap:wrap;gap:6px}
+    .list{display:grid;gap:10px;margin-top:10px}
+    .item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#0a132a;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .item .meta{display:grid;gap:6px}
+    .label{font-size:12px;color:var(--muted)}
+    .addr{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:#a8c4ff}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .divider{height:1px;background:var(--border);margin:12px 0}
+    .searchbar{display:flex;gap:8px;margin-top:6px}
+    .hint{color:var(--muted);font-size:12px}
+    .small{font-size:12px}
+    .ghost{background:transparent;border-style:dashed}
+    .hidden{display:none}
+    .authbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    .me{color:var(--muted);font-size:13px}
+
+    /* DexScreener Results Styles */
+    .dex-token-card{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+    .dex-token-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .dex-token-logo{width:24px;height:24px;border-radius:50%}
+    .dex-token-name{font-weight:600;color:var(--text)}
+    .dex-token-symbol{color:var(--muted);font-size:12px}
+    .dex-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-top:8px}
+    .dex-stat{text-align:center;padding:6px;background:var(--chip);border-radius:6px}
+    .dex-stat-label{font-size:10px;color:var(--muted);margin-bottom:2px}
+    .dex-stat-value{font-size:12px;font-weight:600;color:var(--text)}
+    .dex-positive{color:var(--accent-2)}
+    .dex-negative{color:var(--danger)}
+    .dex-chain{display:inline-block;background:var(--accent);color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:4px}
+    .dex-error{background:rgba(255,92,122,0.1);border-color:var(--danger);color:var(--danger)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Crypto Wallet Toolkit</h1>
+      <div class="subtitle">Wallet Library • Wallet Tracker • Token Analysis — no blockchain APIs, just smart links</div>
+
+      <!-- Auth bar -->
+      <div class="authbar">
+        <div id="signed-out" class="row">
+          <input id="email" type="email" placeholder="Email (created in Firebase Console)" />
+          <input id="password" type="password" placeholder="Password" />
+          <button class="primary" id="btn-signin">Sign In</button>
+        </div>
+        <div id="signed-in" class="row hidden">
+          <span class="me">Signed in as <span id="me-email" class="pill"></span></span>
+          <button id="btn-signout">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- App content gated by auth -->
+  <main id="app" class="wrap grid grid-3 hidden" style="margin-top:16px">
+
+    <!-- Wallet Library -->
+    <section id="wallet-library">
+      <h2>Wallet Library</h2>
+
+      <div class="panel">
+        <div class="row">
+          <input id="wl-address" type="text" placeholder="Wallet Address (e.g., 2AnNYf...Ezu)" />
+          <input id="wl-name" type="text" placeholder="Wallet Name (e.g., Su Zhu Wallet)" />
+          <input id="wl-labels" type="text" placeholder="Labels (comma-separated, e.g., Tokabu Whale, Fartcoin Whale)" />
+          <button class="primary" id="btn-add-wallet">Add / Save</button>
+          <button class="ghost" id="btn-reset-form" title="Clear form">Clear</button>
+        </div>
+        <div class="hint" id="edit-hint" style="display:none;margin-top:8px;">
+          Editing wallet <span id="edit-id" class="pill"></span> — click <b>Add / Save</b> to update or <b>Clear</b> to cancel.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="searchbar">
+          <input id="search" type="text" placeholder="Search by wallet name, address, or label..." />
+          <button id="btn-clear-search">Clear</button>
+        </div>
+
+        <div class="list" id="wallet-list" aria-live="polite"></div>
+      </div>
+
+      <div class="hint" style="margin-top:8px">
+        Tip: Click <span class="pill">Copy</span> to copy the address. Use the search bar to filter instantly.
+      </div>
+    </section>
+
+    <!-- Wallet Tracker -->
+    <section id="wallet-tracker">
+      <h2>Wallet Tracker</h2>
+      <div class="panel">
+        <label class="label">Wallet Address</label>
+        <input id="trk-address" type="text" placeholder="Paste wallet address here..." />
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button class="success" id="btn-overview">Wallet Overview (Zerion)</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <label class="label">Token Name (for history search)</label>
+        <input id="trk-token" type="text" placeholder="e.g., brew" />
+        <div class="row">
+          <button class="primary" id="btn-history" disabled>Token History for Wallet (Zerion)</button>
+        </div>
+
+        <div class="hint" style="margin-top:8px">
+          The history button enables only when both <b>Wallet Address</b> and <b>Token Name</b> are filled.
+        </div>
+      </div>
+    </section>
+
+    <!-- Token Analysis -->
+    <section id="token-analysis">
+      <h2>Token Analysis</h2>
+      <div class="panel">
+        <label class="label">Contract Address (Solana)</label>
+        <input id="ta-contract" type="text" placeholder="Paste contract address..." />
+
+        <div class="row" style="margin-top:10px">
+          <button class="warn" id="btn-holders">Top Holder (Solscan)</button>
+          <button id="btn-deepagent">Deep Agent</button>
+        </div>
+        <div class="hint" style="margin-top:8px">
+          Top Holder opens: <span class="small addr">https://solscan.io/token/&lt;contract&gt;?page_size=40#holders</span><br/>
+          Deep Agent opens: <span class="small addr">https://deepagents.org/tiffany/tQUWJRhLEMdm</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- DexScreener Token Search -->
+        <label class="label">Token Search (DexScreener)</label>
+        <div class="row">
+          <input id="dex-token" type="text" placeholder="Enter token name (e.g., PEPE, ETH, DOGE)" />
+          <button class="primary" id="btn-dex-search">Search Token</button>
+        </div>
+
+        <div id="dex-loading" class="hint" style="display:none; margin-top:8px">
+          🔍 Searching for token data...
+        </div>
+
+        <div id="dex-results" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Firebase (v10 modular CDN) -->
+  <script type="module">
+    // ===== Firebase imports =====
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Your existing config (unchanged)
+    const firebaseConfig = {
+      apiKey: "AIzaSyA9Kfm6XDzJ4HZp2Y5y5j3cQj61zuGi0Sg",
+      authDomain: "testingrudy.firebaseapp.com",
+      projectId: "testingrudy",
+      storageBucket: "testingrudy.firebasestorage.app",
+      messagingSenderId: "348127044040",
+      appId: "1:348127044040:web:9498ff3bf7b36625bf60fd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM helpers
+    const $ = (sel) => document.querySelector(sel);
+    const create = (tag, props = {}, ...children) => {
+      const el = document.createElement(tag);
+      Object.entries(props).forEach(([k, v]) => {
+        if (k === "class") el.className = v;
+        else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.substring(2).toLowerCase(), v);
+        else if (k === "html") el.innerHTML = v;
+        else el.setAttribute(k, v);
+      });
+      children.forEach(c => {
+        if (c == null) return;
+        if (typeof c === "string") el.appendChild(document.createTextNode(c));
+        else el.appendChild(c);
+      });
+      return el;
+    };
+
+    // Auth UI elements
+    const signedOut = $("#signed-out");
+    const signedIn  = $("#signed-in");
+    const meEmail   = $("#me-email");
+    const emailIn   = $("#email");
+    const passIn    = $("#password");
+    const btnSignin = $("#btn-signin");
+    const btnSignout= $("#btn-signout");
+    const appMain   = $("#app");
+
+    // App UI elements
+    const addressIn = $("#wl-address");
+    const nameIn = $("#wl-name");
+    const labelsIn = $("#wl-labels");
+    const addBtn = $("#btn-add-wallet");
+    const resetBtn = $("#btn-reset-form");
+    const listEl = $("#wallet-list");
+    const editHint = $("#edit-hint");
+    const editIdPill = $("#edit-id");
+    const searchIn = $("#search");
+    const clearSearchBtn = $("#btn-clear-search");
+
+    const trkAddr = $("#trk-address");
+    const trkToken = $("#trk-token");
+    const btnOverview = $("#btn-overview");
+    const btnHistory = $("#btn-history");
+
+    const taContract = $("#ta-contract");
+    const btnHolders = $("#btn-holders");
+    const btnDeepAgent = $("#btn-deepagent");
+
+    // DexScreener elements
+    const dexTokenIn = $("#dex-token");
+    const btnDexSearch = $("#btn-dex-search");
+    const dexLoading = $("#dex-loading");
+    const dexResults = $("#dex-results");
+
+    // state
+    let currentUser = null;
+    let editingDocId = null;   // if set, Add/Save updates instead of creating
+    let cache = [];            // local cache for client-side search
+    let unsub = null;          // to detach Firestore listener on sign-out
+
+    // ---- Auth handlers ----
+    btnSignin.addEventListener("click", async () => {
+      const email = (emailIn.value || "").trim();
+      const pass  = (passIn.value  || "").trim();
+      if (!email || !pass) { alert("Please enter email & password."); return; }
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        passIn.value = ""; // clear password field on success
+      } catch (e) {
+        console.error(e);
+        alert("Sign-in failed: " + (e?.message || e));
+      }
+    });
+
+    btnSignout.addEventListener("click", async () => {
+      try {
+        if (unsub) { unsub(); unsub = null; }
+        await signOut(auth);
+      } catch (e) {
+        console.error(e);
+        alert("Sign-out failed.");
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user || null;
+
+      if (currentUser) {
+        // Show app, hide sign-in row
+        signedOut.classList.add("hidden");
+        signedIn.classList.remove("hidden");
+        meEmail.textContent = currentUser.email || "(no-email)";
+        appMain.classList.remove("hidden");
+        bootLibraryListener();
+      } else {
+        // Hide app, show sign-in row
+        signedIn.classList.add("hidden");
+        signedOut.classList.remove("hidden");
+        meEmail.textContent = "";
+        appMain.classList.add("hidden");
+        cache = [];
+        listEl.innerHTML = "";
+        if (unsub) { unsub(); unsub = null; }
+      }
+    });
+
+    function walletColRef() {
+      if (!currentUser) return null;
+      return collection(db, "users", currentUser.uid, "wallets");
+    }
+
+    function parseLabels(text) {
+      if (!text) return [];
+      return text.split(",").map(s => s.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+    }
+
+    function clearForm() {
+      editingDocId = null;
+      addressIn.value = "";
+      nameIn.value = "";
+      labelsIn.value = "";
+      editHint.style.display = "none";
+      editIdPill.textContent = "";
+      addBtn.textContent = "Add / Save";
+    }
+
+    resetBtn.addEventListener("click", clearForm);
+
+    // Add / Save
+    addBtn.addEventListener("click", async () => {
+      if (!currentUser) { alert("Please sign in first."); return; }
+
+      const address = addressIn.value.trim();
+      const wname = nameIn.value.trim();
+      const labels = parseLabels(labelsIn.value);
+
+      if (!address) { alert("Wallet Address is required."); return; }
+
+      const payload = {
+        address,
+        name: wname || "",
+        labels,
+        updatedAt: Date.now()
+      };
+
+      try {
+        if (editingDocId) {
+          await setDoc(doc(walletColRef(), editingDocId), payload, { merge: true });
+        } else {
+          payload.createdAt = Date.now();
+          await addDoc(walletColRef(), payload);
+        }
+        clearForm();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to save wallet.");
+      }
+    });
+
+    // Real-time list
+    function bootLibraryListener() {
+      if (!currentUser) return;
+      if (unsub) { unsub(); unsub = null; }
+      const qref = query(walletColRef(), orderBy("updatedAt", "desc"));
+      unsub = onSnapshot(qref, (snap) => {
+        cache = [];
+        snap.forEach(d => cache.push({ id: d.id, ...d.data() }));
+        renderList();
+      }, (err) => {
+        console.error(err);
+        alert("Failed to load wallets. Check rules/auth.");
+      });
+    }
+
+    function renderList(items = cache) {
+      listEl.innerHTML = "";
+      if (items.length === 0) {
+        listEl.appendChild(create("div", { class: "hint" }, "No wallets yet. Add your first one above."));
+        return;
+      }
+
+      items.forEach(item => {
+        const labels = Array.isArray(item.labels) ? item.labels : [];
+        const meta = create("div", { class: "meta" },
+          create("div", {}, create("span", { class: "label" }, "Wallet Name"), " ", (item.name || "(unnamed)")),
+          create("div", {}, create("span", { class: "label" }, "Address"), " ", create("span", { class: "addr" }, item.address)),
+          create("div", {}, create("span", { class: "label" }, "Labels"), " ",
+            labels.length ? create("div", { class: "taglist" }, ...labels.map(l => create("span", { class: "pill" }, l))) : create("span", { class: "hint" }, "—")
+          )
+        );
+
+        const toolbar = create("div", { class: "toolbar" },
+          create("button", {
+            class: "ghost",
+            onClick: async (e) => {
+              try {
+                await navigator.clipboard.writeText(item.address);
+                const old = e.target.textContent;
+                e.target.textContent = "Copied!";
+                setTimeout(()=>e.target.textContent = old, 1000);
+              } catch {
+                alert("Copy failed");
+              }
+            }
+          }, "Copy"),
+          create("button", { onClick: () => beginEdit(item) }, "Edit"),
+          create("button", { class: "danger", onClick: () => removeItem(item.id) }, "Delete")
+        );
+
+        listEl.appendChild(create("div", { class: "item" }, meta, toolbar));
+      });
+    }
+
+    function beginEdit(item) {
+      editingDocId = item.id;
+      addressIn.value = item.address || "";
+      nameIn.value = item.name || "";
+      labelsIn.value = (item.labels || []).join(", ");
+      editIdPill.textContent = editingDocId.slice(0, 6) + "…" + editingDocId.slice(-4);
+      editHint.style.display = "block";
+      addBtn.textContent = "Save Changes";
+      addressIn.focus();
+    }
+
+    async function removeItem(id) {
+      if (!currentUser) { alert("Please sign in first."); return; }
+      if (!confirm("Delete this wallet?")) return;
+      try {
+        await deleteDoc(doc(walletColRef(), id));
+        if (editingDocId === id) clearForm();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete.");
+      }
+    }
+
+    // Client-side search
+    const normalize = (s)=> (s||"").toString().toLowerCase();
+    const matches = (item,q)=>{
+      if (!q) return true;
+      const qq = normalize(q);
+      return normalize(item.name).includes(qq)
+        || normalize(item.address).includes(qq)
+        || (Array.isArray(item.labels) && item.labels.some(l => normalize(l).includes(qq)));
+    };
+    searchIn.addEventListener("input", () => {
+      const q = searchIn.value.trim();
+      renderList(cache.filter(it => matches(it, q)));
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchIn.value = "";
+      renderList(cache);
+      searchIn.focus();
+    });
+
+    // ===== Wallet Tracker logic (Zerion) =====
+    const safeEncode=(s)=> encodeURIComponent((s||"").trim());
+    const ensureAddr=()=>{
+      const a = trkAddr.value.trim();
+      if (!a){ alert("Please input wallet address"); return null; }
+      return a;
+    };
+    btnOverview.addEventListener("click", () => {
+      const addr = ensureAddr(); if (!addr) return;
+      window.open(`https://app.zerion.io/${safeEncode(addr)}/overview`, "_blank", "noopener");
+    });
+    const updateHistoryBtnState=()=>{
+      btnHistory.disabled = !(trkAddr.value.trim() && trkToken.value.trim());
+    };
+    trkAddr.addEventListener("input", updateHistoryBtnState);
+    trkToken.addEventListener("input", updateHistoryBtnState);
+    updateHistoryBtnState();
+    btnHistory.addEventListener("click", () => {
+      const addr = trkAddr.value.trim();
+      const token = trkToken.value.trim();
+      if (!addr || !token){ alert("Please fill both Wallet Address and Token Name."); return; }
+      window.open(`https://app.zerion.io/${safeEncode(addr)}/history?search=${safeEncode(token)}`, "_blank", "noopener");
+    });
+
+    // ===== Token Analysis =====
+    btnHolders.addEventListener("click", () => {
+      const ca = taContract.value.trim();
+      if (!ca){ alert("Please input the contract address."); return; }
+      window.open(`https://solscan.io/token/${safeEncode(ca)}?page_size=40#holders`, "_blank", "noopener");
+    });
+    btnDeepAgent.addEventListener("click", () => {
+      window.open("https://deepagents.org/tiffany/tQUWJRhLEMdm", "_blank", "noopener");
+    });
+
+    // ===== DexScreener Integration =====
+    // Replace with your actual Netlify URL after deployment
+    const DEXSCREENER_API = 'https://your-site-name.netlify.app/api/tools/dexscreener-search';
+
+    function formatDexNumber(num) {
+      const n = parseFloat(num);
+      if (isNaN(n) || num === null || num === undefined) return '0';
+      if (n === 0) return '0';
+      if (n < 0.000001) return n.toExponential(2);
+      if (n < 0.01) return n.toFixed(6);
+      if (n < 1) return n.toFixed(4);
+      if (n < 1000) return n.toFixed(2);
+      if (n < 1000000) return (n / 1000).toFixed(1) + 'K';
+      if (n < 1000000000) return (n / 1000000).toFixed(1) + 'M';
+      return (n / 1000000000).toFixed(1) + 'B';
+    }
+
+    function createDexTokenCard(pair) {
+      const priceChange24h = pair.priceChange?.h24 || 0;
+      const priceChangeClass = priceChange24h >= 0 ? 'dex-positive' : 'dex-negative';
+      const priceChangeSymbol = priceChange24h >= 0 ? '+' : '';
+
+      const card = create("div", { class: "dex-token-card" });
+
+      const header = create("div", { class: "dex-token-header" });
+
+      if (pair.info?.imageUrl) {
+        header.appendChild(create("img", {
+          src: pair.info.imageUrl,
+          alt: pair.baseToken.symbol,
+          class: "dex-token-logo"
+        }));
+      }
+
+      header.appendChild(create("div", {},
+        create("div", { class: "dex-token-name" }, pair.baseToken.name || pair.baseToken.symbol),
+        create("div", { class: "dex-token-symbol" },
+          create("span", { class: "dex-chain" }, pair.chainId.toUpperCase()),
+          `${pair.baseToken.symbol}/${pair.quoteToken.symbol}`
+        )
+      ));
+
+      const stats = create("div", { class: "dex-stats" },
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "Price"),
+          create("div", { class: "dex-stat-value" }, `$${formatDexNumber(pair.priceUsd)}`)
+        ),
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "24h Change"),
+          create("div", { class: `dex-stat-value ${priceChangeClass}` },
+            `${priceChangeSymbol}${formatDexNumber(priceChange24h)}%`)
+        ),
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "Volume 24h"),
+          create("div", { class: "dex-stat-value" }, `$${formatDexNumber(pair.volume?.h24 || 0)}`)
+        ),
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "Liquidity"),
+          create("div", { class: "dex-stat-value" }, `$${formatDexNumber(pair.liquidity?.usd || 0)}`)
+        ),
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "Market Cap"),
+          create("div", { class: "dex-stat-value" }, `$${formatDexNumber(pair.marketCap || 0)}`)
+        ),
+        create("div", { class: "dex-stat" },
+          create("div", { class: "dex-stat-label" }, "DEX"),
+          create("div", { class: "dex-stat-value" }, pair.dexId)
+        )
+      );
+
+      card.appendChild(header);
+      card.appendChild(stats);
+
+      if (pair.url) {
+        card.appendChild(create("div", { style: "margin-top:8px;font-size:12px" },
+          create("a", {
+            href: pair.url,
+            target: "_blank",
+            style: "color:var(--accent);text-decoration:none"
+          }, "View on DexScreener →")
+        ));
+      }
+
+      return card;
+    }
+
+    async function searchDexScreener() {
+      const token = dexTokenIn.value.trim();
+      if (!token) {
+        alert('Please enter a token name');
+        return;
+      }
+
+      btnDexSearch.disabled = true;
+      btnDexSearch.textContent = 'Searching...';
+      dexLoading.style.display = 'block';
+      dexResults.innerHTML = '';
+
+      try {
+        const response = await fetch(`${DEXSCREENER_API}?q=${encodeURIComponent(token)}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          displayDexResults(data);
+        } else {
+          throw new Error(data.error || 'Search failed');
+        }
+      } catch (error) {
+        displayDexError(error.message);
+      } finally {
+        btnDexSearch.disabled = false;
+        btnDexSearch.textContent = 'Search Token';
+        dexLoading.style.display = 'none';
+      }
+    }
+
+    function displayDexResults(data) {
+      if (!data.pairs || data.pairs.length === 0) {
+        dexResults.innerHTML = '<div class="hint">No tokens found. Try a different search term.</div>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      // Show top 3 results to fit the space
+      const topPairs = data.pairs.slice(0, 3);
+      topPairs.forEach(pair => {
+        fragment.appendChild(createDexTokenCard(pair));
+      });
+
+      if (data.pairs.length > 3) {
+        fragment.appendChild(create("div", { class: "hint" },
+          `Showing top 3 of ${data.pairs.length} results`));
+      }
+
+      dexResults.appendChild(fragment);
+    }
+
+    function displayDexError(message) {
+      dexResults.innerHTML = `<div class="dex-token-card dex-error">Error: ${message}</div>`;
+    }
+
+    // Event listeners
+    btnDexSearch.addEventListener("click", searchDexScreener);
+    dexTokenIn.addEventListener("keypress", (e) => {
+      if (e.key === 'Enter') searchDexScreener();
+    });
+  </script>
+</body>
+</html>
